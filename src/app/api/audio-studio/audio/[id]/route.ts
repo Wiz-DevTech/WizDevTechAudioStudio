@@ -42,7 +42,7 @@ export async function GET(
   } catch (error) {
     console.error('Get audio error:', error)
     return NextResponse.json(
-      { error: 'Failed to get audio file' },
+      { error: 'Failed to retrieve audio file' },
       { status: 500 }
     )
   }

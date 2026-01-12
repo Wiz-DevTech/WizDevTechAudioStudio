@@ -6,10 +6,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import { Play, Download, Loader2, Volume2, Plus, User, Star } from 'lucide-react'
+import { Play, Download, Loader2, Volume2, Plus, User, Star, X } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { Card } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, ScrollArea } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 
 interface VoiceOption {
@@ -43,6 +43,7 @@ export default function TTSGenerator() {
   const [showAddVoice, setShowAddVoice] = useState(false)
   const [newVoiceName, setNewVoiceName] = useState('')
   const [newVoiceDescription, setNewVoiceDescription] = useState('')
+  const [selectedBaseVoice, setSelectedBaseVoice] = useState('tongtong')
 
   // Load custom voices from localStorage on mount
   useEffect(() => {
@@ -165,6 +166,7 @@ export default function TTSGenerator() {
     // Reset form
     setNewVoiceName('')
     setNewVoiceDescription('')
+    setSelectedBaseVoice('tongtong')
     setShowAddVoice(false)
     
     toast({
@@ -184,7 +186,7 @@ export default function TTSGenerator() {
     // Save to localStorage
     localStorage.setItem('customVoices', JSON.stringify(updatedCustomVoices))
     
-    // Reset to default voice if the deleted one was selected
+    // Reset to default voice if deleted one was selected
     if (selectedVoice === voiceId) {
       setSelectedVoice('tongtong')
     }
@@ -211,6 +213,11 @@ export default function TTSGenerator() {
 
   const isPrimaryVoice = (voiceId: string) => {
     return getPrimaryVoiceId() === voiceId
+  }
+
+  const getVoiceDescription = (voiceId: string) => {
+    const voice = allVoices.find(v => v.id === voiceId)
+    return voice?.description || ''
   }
 
   return (
@@ -242,16 +249,17 @@ export default function TTSGenerator() {
                 Add Custom Voice
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Add Your Voice</DialogTitle>
                 <DialogDescription>
-                  Add your own voice to the list. This voice will use one of the built-in voice engines.
+                  Add your own voice to the list. Your voice will use one of the built-in voice engines.
+                  You can optionally add a detailed guide/instructions with the voice.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
+              <div className="space-y-4 py-2">
                 <div>
-                  <Label htmlFor="voice-name-input">Voice Name</Label>
+                  <Label htmlFor="voice-name-input">Voice Name *</Label>
                   <Input
                     id="voice-name-input"
                     placeholder="e.g., My Voice, Narrator"
@@ -260,39 +268,50 @@ export default function TTSGenerator() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="voice-desc-input">Description (Optional)</Label>
-                  <Input
-                    id="voice-desc-input"
-                    placeholder="e.g., Soft and calm, Energetic and clear"
-                    value={newVoiceDescription}
-                    onChange={(e) => setNewVoiceDescription(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Choose Base Voice</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+                  <Label>Choose Base Voice *</Label>
+                  <div className="grid grid-cols-4 gap-2 mt-2">
                     {defaultVoices.map((voice) => (
                       <div
                         key={voice.id}
                         className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${
-                          selectedVoice === voice.id ? 'border-primary bg-primary/5' : ''
+                          selectedBaseVoice === voice.id ? 'border-primary bg-primary/5' : ''
                         }`}
-                        onClick={() => setSelectedVoice(voice.id)}
+                        onClick={() => setSelectedBaseVoice(voice.id)}
                       >
-                        <div className="text-sm font-medium">{voice.name}</div>
-                        <div className="text-xs text-muted-foreground">{voice.description}</div>
+                        <div className="text-sm font-medium text-center">{voice.name}</div>
+                        <div className="text-xs text-muted-foreground text-center mt-1">{voice.description}</div>
                       </div>
                     ))}
                   </div>
                 </div>
+                <div>
+                  <Label htmlFor="voice-desc-input">
+                    Description & Guide 
+                    <span className="text-muted-foreground">(Optional)</span>
+                  </Label>
+                  <Textarea
+                    id="voice-desc-input"
+                    placeholder="Enter a short description or paste a full guide (e.g., installation instructions, usage tips)..."
+                    value={newVoiceDescription}
+                    onChange={(e) => setNewVoiceDescription(e.target.value)}
+                    rows={8}
+                    maxLength={10000}
+                    className="resize-none font-mono text-sm"
+                  />
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {newVoiceDescription.length} / 10000 characters
+                  </div>
+                </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowAddVoice(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddCustomVoice} disabled={!newVoiceName.trim()}>
-                  Add Voice
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => setShowAddVoice(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAddCustomVoice} disabled={!newVoiceName.trim()}>
+                    Add Voice
+                  </Button>
+                </div>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -313,25 +332,27 @@ export default function TTSGenerator() {
                     <SelectItem value={voice.id}>
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-primary" />
-                        <div>
+                        <div className="flex-1">
                           <div className="font-medium flex items-center gap-2">
                             {voice.name}
                             {isPrimaryVoice(voice.id) && <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />}
                           </div>
-                          <div className="text-sm text-muted-foreground">{voice.description}</div>
+                          <div className="text-xs text-muted-foreground max-w-xs truncate">
+                            {voice.description}
+                          </div>
                         </div>
                       </div>
                     </SelectItem>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="absolute right-8 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-destructive/10"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-destructive/10"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleDeleteCustomVoice(voice.id)
                       }}
                     >
-                      ×
+                      <X className="w-4 h-4" />
                     </Button>
                   </div>
                 ))}
@@ -398,17 +419,26 @@ export default function TTSGenerator() {
 
       {/* Set as Primary Voice (only for custom voices) */}
       {selectedVoice && customVoices.find(v => v.id === selectedVoice) && (
-        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-yellow-400" />
-            <div>
-              <div className="text-sm font-medium">
-                {customVoices.find(v => v.id === selectedVoice)?.name}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {isPrimaryVoice(selectedVoice) ? 'This is your primary voice' : 'Set as primary voice'}
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Star className="w-5 h-5 text-yellow-400" />
+              <div>
+                <div className="text-sm font-medium">
+                  {customVoices.find(v => v.id === selectedVoice)?.name}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {isPrimaryVoice(selectedVoice) ? 'This is your primary voice' : 'Set as primary voice'}
+                </div>
               </div>
             </div>
+            {/* Show description preview if it exists */}
+            {getVoiceDescription(selectedVoice) && (
+              <div className="text-xs text-muted-foreground mt-2 max-h-16 overflow-y-auto">
+                {getVoiceDescription(selectedVoice).substring(0, 200)}
+                {getVoiceDescription(selectedVoice).length > 200 && '...'}
+              </div>
+            )}
           </div>
           {!isPrimaryVoice(selectedVoice) && (
             <Button

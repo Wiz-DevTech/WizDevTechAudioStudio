@@ -7,13 +7,13 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import { Play, Download, Loader2, Plus, Trash2, Volume2, MessageSquare, User, Star } from 'lucide-react'
+import { Play, Download, Loader2, Plus, Trash2, Volume2, MessageSquare, User, Star, X } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, ScrollArea as DialogScrollArea } from '@/components/ui/dialog'
 
 interface VoiceOption {
   id: string
@@ -55,6 +55,7 @@ export default function ConversationBuilder() {
   const [showAddVoice, setShowAddVoice] = useState(false)
   const [newVoiceName, setNewVoiceName] = useState('')
   const [newVoiceDescription, setNewVoiceDescription] = useState('')
+  const [selectedBaseVoice, setSelectedBaseVoice] = useState('tongtong')
 
   // Load custom voices from localStorage on mount
   useEffect(() => {
@@ -234,6 +235,7 @@ export default function ConversationBuilder() {
     // Reset form
     setNewVoiceName('')
     setNewVoiceDescription('')
+    setSelectedBaseVoice('tongtong')
     setShowAddVoice(false)
     
     toast({
@@ -282,6 +284,11 @@ export default function ConversationBuilder() {
     return getPrimaryVoiceId() === voiceId
   }
 
+  const getVoiceDescription = (voiceId: string) => {
+    const voice = allVoices.find(v => v.id === voiceId)
+    return voice?.description || ''
+  }
+
   return (
     <div className="grid lg:grid-cols-2 gap-6">
       {/* Conversation Editor Panel */}
@@ -296,16 +303,17 @@ export default function ConversationBuilder() {
                   Add My Voice
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Add Your Voice</DialogTitle>
                   <DialogDescription>
                     Add your own voice to the list. This voice will use one of the built-in voice engines.
+                    You can optionally add a detailed guide/instructions with the voice.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="space-y-4 py-2">
                   <div>
-                    <Label htmlFor="voice-name-input">Voice Name</Label>
+                    <Label htmlFor="voice-name-input">Voice Name *</Label>
                     <Input
                       id="voice-name-input"
                       placeholder="e.g., My Voice, Narrator"
@@ -314,39 +322,50 @@ export default function ConversationBuilder() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="voice-desc-input">Description (Optional)</Label>
-                    <Input
+                    <Label htmlFor="voice-desc-input">
+                      Description & Guide 
+                      <span className="text-muted-foreground">(Optional)</span>
+                    </Label>
+                    <Textarea
                       id="voice-desc-input"
-                      placeholder="e.g., Soft and calm, Energetic and clear"
+                      placeholder="Enter a short description or paste a full guide (e.g., installation instructions, usage tips, troubleshooting steps)..."
                       value={newVoiceDescription}
                       onChange={(e) => setNewVoiceDescription(e.target.value)}
+                      rows={8}
+                      maxLength={10000}
+                      className="resize-none font-mono text-sm"
                     />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {newVoiceDescription.length} / 10000 characters
+                    </div>
                   </div>
                   <div>
-                    <Label>Choose Base Voice</Label>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <Label>Choose Base Voice *</Label>
+                    <div className="grid grid-cols-4 gap-2 mt-2">
                       {defaultVoices.map((voice) => (
                         <div
                           key={voice.id}
                           className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${
-                            newLineSpeaker === voice.id ? 'border-primary bg-primary/5' : ''
+                            selectedBaseVoice === voice.id ? 'border-primary bg-primary/5' : ''
                           }`}
-                          onClick={() => setNewLineSpeaker(voice.id)}
+                          onClick={() => setSelectedBaseVoice(voice.id)}
                         >
-                          <div className="text-sm font-medium">{voice.name}</div>
-                          <div className="text-xs text-muted-foreground">{voice.description}</div>
+                          <div className="text-sm font-medium text-center">{voice.name}</div>
+                          <div className="text-xs text-muted-foreground text-center mt-1">{voice.description}</div>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowAddVoice(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddCustomVoice} disabled={!newVoiceName.trim()}>
-                    Add Voice
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setShowAddVoice(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAddCustomVoice} disabled={!newVoiceName.trim()}>
+                      Add Voice
+                    </Button>
+                  </div>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -390,12 +409,14 @@ export default function ConversationBuilder() {
                               <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-primary" />
                                 <div className={`w-2 h-2 rounded-full ${voice.color}`} />
-                                <div>
+                                <div className="flex-1">
                                   <div className="font-medium flex items-center gap-2">
                                     {voice.name}
                                     {isPrimaryVoice(voice.id) && <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />}
                                   </div>
-                                  <div className="text-xs text-muted-foreground">{voice.description}</div>
+                                  <div className="text-xs text-muted-foreground max-w-xs truncate">
+                                    {voice.description}
+                                  </div>
                                 </div>
                               </div>
                             </SelectItem>
@@ -408,7 +429,7 @@ export default function ConversationBuilder() {
                                 handleDeleteCustomVoice(voice.id)
                               }}
                             >
-                              ×
+                              <X className="w-4 h-4" />
                             </Button>
                           </div>
                         ))}

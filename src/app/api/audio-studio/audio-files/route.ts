@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Get audio files error:', error)
     return NextResponse.json(
-      { error: 'Failed to get audio file list' },
+      { error: 'Failed to retrieve audio file list' },
       { status: 500 }
     )
   }

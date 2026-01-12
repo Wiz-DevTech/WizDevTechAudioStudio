@@ -4,6 +4,10 @@ import { join } from 'path'
 import { existsSync } from 'fs'
 import { db } from '@/lib/db'
 
+const VALID_VOICES = [
+  'tongtong', 'chuichui', 'xiaochen', 'jam', 'kazi', 'douji', 'luodo'
+]
+
 export async function POST(req: NextRequest) {
   try {
     const { text, voice = 'tongtong', speed = 1.0, volume = 1.0 } = await req.json()
@@ -19,6 +23,23 @@ export async function POST(req: NextRequest) {
     if (text.length > 1024) {
       return NextResponse.json(
         { error: 'Text length cannot exceed 1024 characters' },
+        { status: 400 }
+      )
+    }
+
+    // Check if custom voice, extract base voice if needed
+    let actualVoice = voice
+    if (voice.startsWith('custom-')) {
+      // For custom voices, we need to map to a base voice
+      // For now, use 'tongtong' as default for custom voices
+      // In a real implementation, you would store the baseVoiceId in localStorage
+      actualVoice = 'tongtong'
+    }
+
+    // Validate voice
+    if (!VALID_VOICES.includes(actualVoice)) {
+      return NextResponse.json(
+        { error: 'Invalid voice selected. Please choose a valid voice option.' },
         { status: 400 }
       )
     }
@@ -46,7 +67,7 @@ export async function POST(req: NextRequest) {
     // Generate TTS audio
     const response = await zai.audio.tts.create({
       input: text.trim(),
-      voice: voice,
+      voice: actualVoice,
       speed: speed,
       volume: volume,
       response_format: 'wav',
